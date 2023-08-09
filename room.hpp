@@ -8,6 +8,7 @@
 #include <vector>
 #include <deque>
 #include <regex>
+#include <cmath>
 
 #include "session.hpp"
 
