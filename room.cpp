@@ -11,13 +11,13 @@ Room::Room(std::filesystem::path inFilePath)
 
     std::size_t countTables;
 
-    const std::regex countTablesRegex{"([1-9]\\d*)"};
+    const std::regex countTablesRegex{"^[1-9]\\d*$"};
     auto matched = parse(countTablesRegex);
     countTables = std::stoull(matched[0]);
 
     this->tables.resize(countTables);
 
-    const std::regex timesRegex{"([0-1]\\d|2[0-3]):([0-5]\\d) ([0-1]\\d|2[0-3]):([0-5]\\d)"};  // for line like "09:00 19:00"
+    const std::regex timesRegex{"^([0-1]\\d|2[0-3]):([0-5]\\d) ([0-1]\\d|2[0-3]):([0-5]\\d)$"};  // for line like "09:00 19:00"
     matched = parse(timesRegex);
     this->startTime = std::stoll(matched[1]) * 60 + std::stoll(matched[2]);
     this->endTime = std::stoll(matched[3]) * 60 + std::stoll(matched[4]);
@@ -225,7 +225,7 @@ void Room::start()
     std::string clientName;
     std::size_t tableId{};
 
-    const std::regex eventRegex{"([0-1]\\d|2[0-3]):([0-5]\\d) (?:(?:(2) ((?:[a-z]|\\d|_|-)+) ([1-9]\\d*))|(?:(1|3|4) ((?:[a-z]|\\d|_|-)+)))"};
+    const std::regex eventRegex{"^([0-1]\\d|2[0-3]):([0-5]\\d) (?:(?:(2) ((?:[a-z]|\\d|_|-)+) ([1-9]\\d*))|(?:(1|3|4) ((?:[a-z]|\\d|_|-)+)))$"};
     auto matched = parse(eventRegex);
     for (; matched.size() > 0; matched = parse(eventRegex))
     {
