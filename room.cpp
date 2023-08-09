@@ -6,7 +6,8 @@ Room::Room(std::filesystem::path inFilePath)
 
     if (!this->inFile.is_open())
     {
-        std::exit(1);
+        logStatistics = false;
+        throw std::runtime_error{"Failed to open file"};
     }
 
     std::size_t countTables;
@@ -24,49 +25,55 @@ Room::Room(std::filesystem::path inFilePath)
 
     if (this->startTime > this->endTime)
     {
-        std::exit(1);
+        // Print last wrong line here if start time is greater then end time
+        std::cout << formatTime(startTime) << ' ' << formatTime(endTime) << std::endl;
+        logStatistics = false;
+        throw std::runtime_error{""};
     }
+
+    std::cout << formatTime(this->startTime) << std::endl;
 
     const std::regex& costRegex = countTablesRegex;
     matched = parse(costRegex);
-    this->cost = std::stoull(matched[1]);
-
-    std::cout << formatTime(this->startTime) << std::endl;
+    this->cost = std::stoull(matched[0]);
 }
 
 Room::~Room()
 {
-    for (auto& tableSessions: tables)
+    if (logStatistics)
     {
-        if (tableSessions.size() > 0 && tableSessions.back().endTime == 0)
+        for (auto& tableSessions: tables)
         {
-            tableSessions.back().endTime = endTime;
-            clients.push_back(tableSessions.back().client);
+            if (tableSessions.size() > 0 && tableSessions.back().endTime == 0)
+            {
+                tableSessions.back().endTime = endTime;
+                clients.push_back(tableSessions.back().client);
+            }
         }
-    }
 
-    std::sort(clients.begin(), clients.end());
+        std::sort(clients.begin(), clients.end());
 
-    for (const auto& client: clients)
-    {
-        logEvent(endTime, client, 11);
-    }
-
-    std::cout << formatTime(endTime) << std::endl;
-
-    for (size_t tableId = 0; tableId < tables.size(); tableId++)
-    {
-        size_t totalTableTime{};
-        size_t tableSum{};
-
-        for (const auto& session: tables[tableId])
+        for (const auto& client: clients)
         {
+            logEvent(endTime, client, 11);
+        }
+
+        std::cout << formatTime(endTime) << std::endl;
+
+        for (size_t tableId = 0; tableId < tables.size(); tableId++)
+        {
+            size_t totalTableTime{};
+            size_t tableSum{};
+
+            for (const auto& session: tables[tableId])
+            {
                 const size_t sessionTime = session.endTime - session.startTime;
                 totalTableTime += sessionTime;
                 tableSum += std::ceil(static_cast<double>(sessionTime) / 60) * cost;
-        }
+            }
 
-        std::cout << std::format("{} {} {}\n", tableId + 1, tableSum, formatTime(totalTableTime));
+            std::cout << std::format("{} {} {}\n", tableId + 1, tableSum, formatTime(totalTableTime));
+        }
     }
 }
 
@@ -92,7 +99,8 @@ std::smatch Room::parse(const std::regex& regex)
     if (!std::regex_search(line, match, regex))
     {
         std::cout << line;
-        std::exit(1);
+        logStatistics = false;
+        throw std::format_error{"Failed to parse with provided regex"};
     }
     return match;
 }
@@ -120,7 +128,8 @@ void Room::clientSat(std::size_t time, std::string client, std::size_t tableId)
 
     if (tableId > tables.size())
     {
-        std::exit(1);
+        logStatistics = false;
+        throw std::runtime_error{""};
     }
 
     bool clientIsFirstInQueue = (clients.size() > 0 && clients.front() == client);
@@ -235,7 +244,8 @@ void Room::start()
         const std::size_t currentTime = std::stoll(matched[1]) * 60 + std::stoll(matched[2]);
         if (currentTime < time)
         {
-            std::exit(1);
+            logStatistics = false;
+            throw std::runtime_error{""};
         }
         else
         {

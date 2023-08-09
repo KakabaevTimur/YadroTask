@@ -19,6 +19,7 @@ class Room
     std::ifstream inFile;
     std::deque<std::string> clients;
     std::vector<std::vector<Session>> tables;
+    bool logStatistics = true;
 
     static constexpr std::size_t UnfinishedSessionEndTime = 0;
 

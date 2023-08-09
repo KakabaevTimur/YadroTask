@@ -7,6 +7,13 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-    Room room{argv[1]};
-    room.start();
+    try
+    {
+        Room room{argv[1]};
+        room.start();
+    }
+    catch(const std::exception& e)
+    {
+        return 1;
+    }
 }
