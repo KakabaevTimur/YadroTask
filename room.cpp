@@ -61,9 +61,9 @@ Room::~Room()
 
         for (const auto& session: tables[tableId])
         {
-            const size_t time = session.endTime - session.startTime;
-            totalTableTime += time;
-            tableSum += std::ceil(static_cast<double>(time) / 60) * cost;
+                const size_t sessionTime = session.endTime - session.startTime;
+                totalTableTime += sessionTime;
+                tableSum += std::ceil(static_cast<double>(sessionTime) / 60) * cost;
         }
 
         std::cout << std::format("{} {} {}\n", tableId + 1, tableSum, formatTime(totalTableTime));
@@ -85,6 +85,7 @@ std::smatch Room::parse(const std::regex& regex)
     static std::string line;
     if (!std::getline(inFile, line))
     {
+        // For last line of input return empty match
         return {};
     }
     std::smatch match;
@@ -243,7 +244,7 @@ void Room::start()
 
         if (!matched[3].str().empty())
         {
-            eventId = std::stoll(matched[3]);
+            eventId = 2;
         }
         else
         {
