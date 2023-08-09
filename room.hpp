@@ -30,13 +30,13 @@ class Room
 
     std::smatch parse(const std::regex&);
 
-    void clientArrive(std::size_t time, std::string client);
+    void clientArrive(std::size_t time, const std::string& client);
 
-    void clientSat(std::size_t time, std::string client, std::size_t tableId);
+    void clientSat(std::size_t time, const std::string& client, std::size_t tableId);
 
-    void clientWait(std::size_t time, std::string client);
+    void clientWait(std::size_t time, const std::string& client);
 
-    void clientLeft(std::size_t time, std::string client);
+    void clientLeft(std::size_t time, const std::string& client);
 
 public:
     Room(std::filesystem::path inFilePath);

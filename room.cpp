@@ -105,7 +105,7 @@ std::smatch Room::parse(const std::regex& regex)
     return match;
 }
 
-void Room::clientArrive(std::size_t time, std::string client)
+void Room::clientArrive(std::size_t time, const std::string& client)
 {
     if (time < startTime || time > endTime)
     {
@@ -122,7 +122,7 @@ void Room::clientArrive(std::size_t time, std::string client)
     clients.push_back(client);
 }
 
-void Room::clientSat(std::size_t time, std::string client, std::size_t tableId)
+void Room::clientSat(std::size_t time, const std::string& client, std::size_t tableId)
 {
     tableId--; // fixing index of table
 
@@ -171,7 +171,7 @@ void Room::clientSat(std::size_t time, std::string client, std::size_t tableId)
     clients.pop_front();
 }
 
-void Room::clientWait(std::size_t time, std::string client)
+void Room::clientWait(std::size_t time, const std::string& client)
 {
     bool hasFreeTable = std::any_of(tables.begin(), tables.end(), [](const auto& tableSessions)
     {
@@ -192,7 +192,7 @@ void Room::clientWait(std::size_t time, std::string client)
     }
 }
 
-void Room::clientLeft(std::size_t time, std::string client)
+void Room::clientLeft(std::size_t time, const std::string& client)
 {
     const auto clientIterator = std::find(clients.begin(), clients.end(), client);
 
