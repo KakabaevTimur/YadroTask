@@ -9,6 +9,7 @@
 #include <deque>
 #include <regex>
 #include <cmath>
+#include <unordered_set>
 
 #include "session.hpp"
 
@@ -18,7 +19,8 @@ class Room
     std::size_t endTime;
     std::size_t cost;
     std::ifstream inFile;
-    std::deque<std::string> clients;
+    std::deque<std::string> clientsQueue;
+    std::unordered_set<std::string> clients;
     std::vector<std::vector<Session>> tables;
     bool logStatistics = true;
 

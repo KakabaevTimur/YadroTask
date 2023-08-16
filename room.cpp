@@ -47,13 +47,13 @@ Room::~Room()
             if (tableSessions.size() > 0 && tableSessions.back().endTime == 0)
             {
                 tableSessions.back().endTime = endTime;
-                clients.push_back(tableSessions.back().client);
+                clientsQueue.push_back(tableSessions.back().client);
             }
         }
 
-        std::sort(clients.begin(), clients.end());
+        std::sort(clientsQueue.begin(), clientsQueue.end());
 
-        for (const auto& client: clients)
+        for (const auto& client: clientsQueue)
         {
             logEvent(endTime, client, 11);
         }
@@ -113,13 +113,20 @@ void Room::clientArrive(std::size_t time, const std::string& client)
         return;
     }
 
-    if (std::find(clients.begin(), clients.end(), client) != clients.end())
+    const bool clientInClub = clients.contains(client);
+    const bool clientInQueue = std::find(clientsQueue.begin(), clientsQueue.end(), client) != clientsQueue.end();
+    const bool clientAtTheTable = std::find_if(tables.begin(), tables.end(), [client](const auto& tableSessions)
+    {
+        return tableSessions.size() > 0 && tableSessions.back().client == client && tableSessions.back().endTime == 0;
+    }) != tables.end();
+
+    if (clientInClub || clientInQueue || clientAtTheTable)
     {
         logEvent(time, "YouShallNotPass");
         return;
     }
 
-    clients.push_back(client);
+    clients.emplace(client);
 }
 
 void Room::clientSat(std::size_t time, const std::string& client, std::size_t tableId)
@@ -132,16 +139,18 @@ void Room::clientSat(std::size_t time, const std::string& client, std::size_t ta
         throw std::runtime_error{""};
     }
 
-    bool clientIsFirstInQueue = (clients.size() > 0 && clients.front() == client);
+    const auto clientQueueIter = std::find(clientsQueue.begin(), clientsQueue.end(), client);
+    const bool clientInQueue = clientQueueIter != clientsQueue.end();
+    const bool clientInClub = clients.contains(client);
 
     const auto tableIterator = std::find_if(tables.begin(), tables.end(), [client](const auto& tableSessions)
     {
         return tableSessions.size() > 0 && tableSessions.back().client == client && tableSessions.back().endTime == 0;
     });
 
-    bool clientIsSitting = (tableIterator != tables.end());
+    const bool clientIsSitting = (tableIterator != tables.end());
 
-    if (!clientIsFirstInQueue && !clientIsSitting)
+    if (!clientInClub && !clientInQueue && !clientIsSitting)
     {
         logEvent(time, "ClientUnknown");
         return;
@@ -157,23 +166,41 @@ void Room::clientSat(std::size_t time, const std::string& client, std::size_t ta
     if (clientIsSitting)
     {
         tableIterator->back().endTime = time;
-        if (clients.size() > 0)
+        if (clientsQueue.size() > 0)
         {
-            tableIterator->push_back(Session{clients.front(), time, UnfinishedSessionEndTime});
-            clients.pop_front();
+            tableIterator->push_back(Session{clientsQueue.front(), time, UnfinishedSessionEndTime});
+            clientsQueue.pop_front();
             const std::size_t freedTableId = std::distance(tables.begin(), tableIterator);
             logEvent(time, std::format("{} {}", client, freedTableId + 1), 12);
         }
     }
+    else if (clientInClub)
+    {
+        clients.erase(client);
+    }
+    else if (clientInQueue)
+    {
+        clientsQueue.erase(clientQueueIter);
+    }
 
     tables[tableId].push_back(Session{client, time, UnfinishedSessionEndTime});
-
-    clients.pop_front();
 }
 
 void Room::clientWait(std::size_t time, const std::string& client)
 {
-    bool hasFreeTable = std::any_of(tables.begin(), tables.end(), [](const auto& tableSessions)
+    const bool queueIsOverflowed = clientsQueue.size() == tables.size();
+    if (queueIsOverflowed)
+    {
+        logEvent(time, client, 11);  // client leaves
+    }
+    else
+    {
+        clientsQueue.push_back(client);
+    }
+
+    clients.erase(client);
+
+    const bool hasFreeTable = std::any_of(tables.begin(), tables.end(), [](const auto& tableSessions)
     {
         return tableSessions.size() == 0 || tableSessions.back().endTime != 0;
     });
@@ -181,30 +208,23 @@ void Room::clientWait(std::size_t time, const std::string& client)
     if (hasFreeTable)
     {
         logEvent(time, "ICanWaitNoLonger!");
-        return;
-    }
-
-    if (clients.size() > tables.size())
-    {
-        clients.erase(std::find(clients.begin(), clients.end(), client));
-
-        logEvent(time, client, 11);
     }
 }
 
 void Room::clientLeft(std::size_t time, const std::string& client)
 {
-    const auto clientIterator = std::find(clients.begin(), clients.end(), client);
+    const auto clientIterator = std::find(clientsQueue.begin(), clientsQueue.end(), client);
 
     const auto tableIterator = std::find_if(tables.begin(), tables.end(), [client](const auto& tableSessions)
     {
         return tableSessions.size() > 0 && tableSessions.back().client == client;
     });
 
-    bool clientIsInQueue = (clientIterator != clients.end());
-    bool clientIsSitting = (tableIterator != tables.end());
+    const bool clientIsInClub = clients.contains(client);
+    const bool clientIsInQueue = (clientIterator != clientsQueue.end());
+    const bool clientIsSitting = (tableIterator != tables.end());
 
-    if (!clientIsInQueue && !clientIsSitting)
+    if (!clientIsInClub && !clientIsInQueue && !clientIsSitting)
     {
         logEvent(time, "ClientUnknown");
         return;
@@ -214,17 +234,21 @@ void Room::clientLeft(std::size_t time, const std::string& client)
     {
         tableIterator->back().endTime = time;
 
-        if (clients.size() > 0)
+        if (clientsQueue.size() > 0)
         {
-            tableIterator->push_back(Session{clients.front(), time, UnfinishedSessionEndTime});
-            clients.pop_front();
+            tableIterator->push_back(Session{clientsQueue.front(), time, UnfinishedSessionEndTime});
+            clientsQueue.pop_front();
             const std::size_t freedTableId = std::distance(tables.begin(), tableIterator);
             logEvent(time, std::format("{} {}", client, freedTableId + 1), 12);
         }
     }
-    else
+    else if (clientIsInQueue)
     {
-        clients.erase(clientIterator);
+        clientsQueue.erase(clientIterator);
+    }
+    else if (clientIsInClub)
+    {
+        clients.erase(client);
     }
 }
 
